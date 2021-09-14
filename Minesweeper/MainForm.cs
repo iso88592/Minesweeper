@@ -15,14 +15,17 @@ namespace Minesweeper
 {
     public partial class MainForm : Form
     {
-        private int[] FieldWidths = {
+        private readonly int[] _fieldWidths =
+        {
             10, 16, 30
         };
-        private int[] FieldHeights =
+
+        private readonly int[] _fieldHeights =
         {
             10, 16, 16
         };
-        private int[] MineCounts =
+
+        private readonly int[] _mineCounts =
         {
             10, 40, 99
         };
@@ -30,12 +33,12 @@ namespace Minesweeper
         private int _fieldWidth = 30;
         private int _fieldHeight = 16;
         private int _mineCount = 99;
-        private int _buttonSize = 24;
+        private const int ButtonSize = 24;
 
         private int[,] _field;
         private Button[,] _buttons;
-        private Label[] _mineButtons;
-        private Label[] _timeButtons;
+        private Label[] _mineLabels;
+        private Label[] _timeLabels;
 
         private bool _gameStarted;
         private bool _gameOver;
@@ -44,70 +47,85 @@ namespace Minesweeper
         private Timer _timer;
         private DateTime _startDateTime;
 
+        private Random _random;
+
+        private void InitGame()
+        {
+            _gameOver = false;
+            _random = new Random();
+        }
 
         public MainForm()
         {
             InitializeComponent();
             FormBorderStyle = FormBorderStyle.FixedSingle;
-            _gameOver = false;
+            InitGame();
+            ExtractImages();
+            GenerateLabels();
+            GenerateButtons();
+        }
 
+        private Label CreateLabel(int i)
+        {
+            return new Label
+            {
+                FlatStyle = FlatStyle.Flat,
+                ImageList = numbers,
+                ImageIndex = 10,
+                Location = new Point(i * 24, 0),
+                Size = new Size(24, 46)
+            };
+        }
+
+        private void GenerateLabels()
+        {
+            _mineLabels = new Label[3];
+            _timeLabels = new Label[3];
+            for (int i = 0; i < 3; i++)
+            {
+                minePanel.Controls.Add(_mineLabels[i] = CreateLabel(i));
+                timePanel.Controls.Add(_timeLabels[i] = CreateLabel(i));
+            }
+        }
+
+        private void ExtractImages()
+        {
             Bitmap image = new Bitmap(
-                System.Reflection.Assembly.GetEntryAssembly().
-                    GetManifestResourceStream("Minesweeper.mines.png"));
+                System.Reflection.Assembly.GetEntryAssembly().GetManifestResourceStream("Minesweeper.mines.png"));
             for (int i = 0; i < 14; i++)
             {
-                Bitmap bitmap = new Bitmap(24,24);
+                Bitmap bitmap = new Bitmap(24, 24);
                 Graphics graphics = Graphics.FromImage(bitmap);
-                graphics.DrawImage(image, new Point(0, -i*24));
+                graphics.DrawImage(image, new Point(0, -i * 24));
                 imageList.Images.Add(bitmap);
             }
 
             image = new Bitmap(
-                System.Reflection.Assembly.GetEntryAssembly().
-                    GetManifestResourceStream("Minesweeper.numbers.png"));
+                System.Reflection.Assembly.GetEntryAssembly().GetManifestResourceStream("Minesweeper.numbers.png"));
             for (int i = 0; i < 12; i++)
             {
-                Bitmap bitmap = new Bitmap(24,46);
+                Bitmap bitmap = new Bitmap(24, 46);
                 Graphics graphics = Graphics.FromImage(bitmap);
-                graphics.ScaleTransform(2,2);
-                graphics.DrawImage(image, new Point(-i*12, 0));
+                graphics.ScaleTransform(2, 2);
+                graphics.DrawImage(image, new Point(-i * 12, 0));
                 numbers.Images.Add(bitmap);
             }
-            _mineButtons = new Label[3];
-            _timeButtons = new Label[3];
-            for (int i = 0; i < 3; i++)
-            {
-                _mineButtons[i] = new Label();
-                _mineButtons[i].FlatStyle = FlatStyle.Flat;
-                _mineButtons[i].ImageList = numbers;
-                _mineButtons[i].ImageIndex = 10;
-                _mineButtons[i].Location = new Point(i*24,0);
-                _mineButtons[i].Size = new Size(24, 46);
-                minePanel.Controls.Add(_mineButtons[i]);
-
-
-                _timeButtons[i] = new Label();
-                _timeButtons[i].FlatStyle = FlatStyle.Flat;
-                _timeButtons[i].ImageList = numbers;
-                _timeButtons[i].ImageIndex = 10;
-                _timeButtons[i].Location = new Point(i*24,0);
-                _timeButtons[i].Size = new Size(24, 46);
-                timePanel.Controls.Add(_timeButtons[i]);
-            }
-
-            
-            GenerateButtons();
         }
 
-        private void NewGame()
+        private void EachField(Action<int, int> action)
         {
             for (int j = 0; j < _fieldHeight; j++)
             {
                 for (int i = 0; i < _fieldWidth; i++)
                 {
-                    gameField.Controls.Remove(_buttons[i,j]);
+                    action.Invoke(i, j);
                 }
             }
+        }
+
+        private void NewGame()
+        {
+            EachField((i, j) => gameField.Controls.Remove(_buttons[i, j]));
 
             _gameOver = false;
             _gameStarted = false;
@@ -130,6 +148,7 @@ namespace Minesweeper
                 UpdateMineCount();
             }
         }
+
         private void ButtonClick(Button button, int i, int j)
         {
             if (_gameOver) return;
@@ -147,9 +166,10 @@ namespace Minesweeper
             }
             else
             {
-                Reveal(i,j);
+                Reveal(i, j);
                 CheckVictory();
             }
+
             if (_field[i, j] == 0)
             {
                 for (int x = -1; x <= 1; x++)
@@ -166,23 +186,13 @@ namespace Minesweeper
 
         private void CheckVictory()
         {
-            int count = 0;
-            for (int j = 0; j < _fieldHeight; j++)
-            {
-                for (int i = 0; i < _fieldWidth; i++)
-                {
-                    if (_buttons[i, j].ImageIndex < 9)
-                    {
-                        count++;
-                    }
-                }
-            }
+            int count = _buttons.Cast<Button>().Count(button => button.ImageIndex < 9);
 
             if (count == _fieldHeight * _fieldWidth - _mineCount)
             {
                 _gameOver = true;
                 int winTime = DateTime.Now.Subtract(_startDateTime).Seconds;
-                MessageBox.Show("You won. Your time is " + winTime + " seconds.");
+                MessageBox.Show($"You won. Your time is {winTime} seconds.");
             }
         }
 
@@ -195,53 +205,26 @@ namespace Minesweeper
             return true;
         }
 
-        private int ToIndex(int i, int j)
-        {
-            if (!CheckCoords(i, j)) return -1;
-            return i + j * _fieldWidth;
-        }
-
         private void EmptyField()
         {
-            for (int j = 0; j < _fieldHeight; j++)
-            {
-                for (int i = 0; i < _fieldWidth; i++)
-                {
-                    _field[i, j] = 0;
-                }
-            }
+            EachField((i, j) => { _field[i, j] = 0;});
         }
 
         private void Reveal(int x, int y)
         {
-            switch (_field[x,y])
+            if (_field[x, y] == 9)
             {
-                case 9:
-                    if (_buttons[x,y].ImageIndex != 11) _buttons[x, y].ImageIndex = 9;
-                    break;
-                default:
-                    if (_buttons[x, y].ImageIndex == 11)
-                    {
-                        _buttons[x, y].ImageIndex = 13;
-                    }
-                    else
-                    {
-                        _buttons[x, y].ImageIndex = _field[x, y];
-                    }
-
-                    break;
+                if (_buttons[x, y].ImageIndex != 11) _buttons[x, y].ImageIndex = 9;
+            }
+            else
+            {
+                _buttons[x, y].ImageIndex = _buttons[x, y].ImageIndex == 11 ? 13 : _field[x, y];
             }
         }
 
         private void RevealMap()
         {
-            for (int j = 0; j < _fieldHeight; j++)
-            {
-                for (int i = 0; i < _fieldWidth; i++)
-                {
-                    Reveal(i,j);
-                }
-            }
+            EachField(Reveal);
         }
 
         private int CountMines(int x, int y)
@@ -256,36 +239,30 @@ namespace Minesweeper
                     if (_field[i + x, j + y] == 9) count++;
                 }
             }
-
             return count;
         }
 
         private void FillField()
         {
-            for (int j = 0; j < _fieldHeight; j++)
+            EachField((i, j) =>
             {
-                for (int i = 0; i < _fieldWidth; i++)
+                if (_field[i, j] != 9)
                 {
-                    if (_field[i, j] != 9)
-                    {
-                        _field[i, j] = CountMines(i, j);
-                    }
+                    _field[i, j] = CountMines(i, j);
                 }
-            }
+            });
         }
 
         private void StartGame(int x, int y)
         {
             EmptyField();
-            List<int> occupied = new List<int>();
-            occupied.Add(ToIndex(x, y));
-            Random random = new Random();
+            List<int> occupied = new List<int> {x + y * _fieldWidth};
             for (int i = 0; i < _mineCount; i++)
             {
                 int newIndex;
                 do
                 {
-                    newIndex = random.Next(_fieldWidth * _fieldHeight);
+                    newIndex = _random.Next(_fieldWidth * _fieldHeight);
                 } while (occupied.Contains(newIndex));
 
                 occupied.Add(newIndex);
@@ -303,17 +280,17 @@ namespace Minesweeper
             int c = _mineCount + _currentMines;
             if (c < 0)
             {
-                _mineButtons[0].ImageIndex = 10;
+                _mineLabels[0].ImageIndex = 10;
                 c = Math.Abs(c);
                 if (c > 99) c = 99;
             }
             else
             {
-                _mineButtons[0].ImageIndex = c / 100 % 10;
+                _mineLabels[0].ImageIndex = c / 100 % 10;
             }
-            _mineButtons[1].ImageIndex = c / 10 % 10;
-            _mineButtons[2].ImageIndex = c / 1 % 10;
-            
+
+            _mineLabels[1].ImageIndex = c / 10 % 10;
+            _mineLabels[2].ImageIndex = c / 1 % 10;
         }
 
         private void GenerateButtons()
@@ -325,18 +302,17 @@ namespace Minesweeper
                 if (_gameOver) _timer.Stop();
                 int c = DateTime.Now.Subtract(_startDateTime).Seconds;
                 if (c > 999) c = 999;
-                _timeButtons[0].ImageIndex = c / 100 % 10;
-                _timeButtons[1].ImageIndex = c / 10 % 10;
-                _timeButtons[2].ImageIndex = c / 1 % 10;
-                
+                _timeLabels[0].ImageIndex = c / 100 % 10;
+                _timeLabels[1].ImageIndex = c / 10 % 10;
+                _timeLabels[2].ImageIndex = c / 1 % 10;
             };
-            _timeButtons[0].ImageIndex = 10;
-            _timeButtons[1].ImageIndex = 10;
-            _timeButtons[2].ImageIndex = 10;
+            _timeLabels[0].ImageIndex = 10;
+            _timeLabels[1].ImageIndex = 10;
+            _timeLabels[2].ImageIndex = 10;
             _currentMines = 0;
             _gameStarted = false;
             UpdateMineCount();
-            Size = new Size(44 + _fieldWidth * _buttonSize, 146 + _fieldHeight * _buttonSize);
+            Size = new Size(44 + _fieldWidth * ButtonSize, 146 + _fieldHeight * ButtonSize);
             _field = new int[_fieldWidth, _fieldHeight];
             _buttons = new Button[_fieldWidth, _fieldHeight];
             for (int j = 0; j < _fieldHeight; j++)
@@ -344,11 +320,20 @@ namespace Minesweeper
                 for (int i = 0; i < _fieldWidth; i++)
                 {
                     _field[i, j] = 0;
-                    _buttons[i, j] = new Button();
                     var x = i;
                     var y = j;
 
-                    _buttons[i,j].MouseUp += delegate(object sender, MouseEventArgs args)
+                    _buttons[i, j] = new Button
+                    {
+                        Size = new Size(ButtonSize, ButtonSize),
+                        Location = new Point(i * ButtonSize, j * ButtonSize),
+                        FlatStyle = FlatStyle.Flat,
+                        FlatAppearance = { BorderSize = 0},
+                        ImageList = imageList,
+                        ImageIndex = 12,
+                    };
+                    
+                    _buttons[i, j].MouseUp += delegate(object sender, MouseEventArgs args)
                     {
                         if (args.Button == MouseButtons.Right)
                         {
@@ -359,35 +344,6 @@ namespace Minesweeper
                     {
                         ButtonClick(_buttons[x, y], x, y);
                     };
-                    _buttons[i, j].KeyUp += delegate(Object target, KeyEventArgs eventArgs)
-                    {
-                        switch (eventArgs.KeyCode)
-                        {
-                            case Keys.Up:
-                                _buttons[x, Math.Max(y - 1, 0)].Focus();
-                                eventArgs.Handled = true;
-                                break;
-                            case Keys.Down:
-                                _buttons[x, Math.Min(y + 1, _fieldHeight - 1)].Focus();
-                                eventArgs.Handled = true;
-                                break;
-                            case Keys.Left:
-                                _buttons[Math.Max(x - 1, 0), y].Focus();
-                                eventArgs.Handled = true;
-                                break;
-                            case Keys.Right:
-                                _buttons[Math.Min(x + 1, _fieldWidth - 1), y].Focus();
-                                eventArgs.Handled = true;
-                                break;
-                        }
-                    };
-                    _buttons[i, j].Size = new Size(_buttonSize, _buttonSize);
-                    _buttons[i, j].Location = new Point(i * this._buttonSize, j * _buttonSize);
-                    _buttons[i, j].FlatStyle = FlatStyle.Flat;
-                    _buttons[i, j].FlatAppearance.BorderSize = 0;
-                    _buttons[i,j].FlatAppearance.MouseOverBackColor = Color.Blue;
-                    _buttons[i,j].ImageList = imageList;
-                    _buttons[i, j].ImageIndex = 12;
                     gameField.Controls.Add(_buttons[i, j]);
                 }
             }
@@ -402,33 +358,37 @@ namespace Minesweeper
         private void Setup(int difficulty)
         {
             NewGame();
-            _fieldHeight = FieldHeights[difficulty];
-            _fieldWidth = FieldWidths[difficulty];
-            _mineCount = MineCounts[difficulty];
+            _fieldHeight = _fieldHeights[difficulty];
+            _fieldWidth = _fieldWidths[difficulty];
+            _mineCount = _mineCounts[difficulty];
             GenerateButtons();
+        }
+
+        private void ClearDifficultySelection()
+        {
+            easyToolStripMenuItem.Checked = false;
+            mToolStripMenuItem.Checked = false;
+            masterToolStripMenuItem.Checked = false;
         }
 
         private void easyToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Setup(0);
+            ClearDifficultySelection();
             easyToolStripMenuItem.Checked = true;
-            mToolStripMenuItem.Checked = false;
-            masterToolStripMenuItem.Checked = false;
         }
 
         private void mToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Setup(1);
-            easyToolStripMenuItem.Checked = false;
+            ClearDifficultySelection();
             mToolStripMenuItem.Checked = true;
-            masterToolStripMenuItem.Checked = false;
         }
 
         private void masterToolStripMenuItem_Click(object sender, EventArgs e)
         {
             Setup(2);
-            easyToolStripMenuItem.Checked = false;
-            mToolStripMenuItem.Checked = false;
+            ClearDifficultySelection();
             masterToolStripMenuItem.Checked = true;
         }
 
@@ -436,7 +396,5 @@ namespace Minesweeper
         {
             Close();
         }
-
-
     }
 }

@@ -126,4 +126,10 @@
   <metadata name="numbers.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>226, 17</value>
   </metadata>
+  <data name="VictoryText" xml:space="preserve">
+    <value>You won. Your time is {0} seconds.</value>
+  </data>
+  <data name="MainForm_CheckVictory_You_won__Your_time_is__0__seconds_" xml:space="preserve">
+    <value>You won. Your time is {0} seconds.</value>
+  </data>
 </root>
