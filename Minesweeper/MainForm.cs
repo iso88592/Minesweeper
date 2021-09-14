@@ -125,6 +125,7 @@ namespace Minesweeper
 
         private void NewGame()
         {
+            _timer.Stop();
             EachField((i, j) => gameField.Controls.Remove(_buttons[i, j]));
 
             _gameOver = false;
@@ -147,6 +148,39 @@ namespace Minesweeper
                 button.ImageIndex = 12;
                 UpdateMineCount();
             }
+        }
+
+        private void ButtonMiddleClick(Button button, int i, int j)
+        {
+            if (button.ImageIndex >= 9) return;
+            int flagCount = 0;
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0) continue;
+                    if (!CheckCoords(x+i, y+j)) continue;
+                    if (_buttons[x + i, y + j].ImageIndex == 11)
+                    {
+                        flagCount++;
+                    }
+                } 
+            }
+
+            if (flagCount != _field[i, j]) return;
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    if (x == 0 && y == 0) continue;
+                    if (!CheckCoords(x+i, y+j)) continue;
+                    if (_buttons[x + i, y + j].ImageIndex == 12)
+                    {
+                        ButtonClick(_buttons[x+i,y+j], x+i, y+j);
+                    }
+                } 
+            }
+            
         }
 
         private void ButtonClick(Button button, int i, int j)
@@ -338,6 +372,11 @@ namespace Minesweeper
                         if (args.Button == MouseButtons.Right)
                         {
                             ButtonRightClick(_buttons[x, y], x, y);
+                        }
+
+                        if (args.Button == MouseButtons.Middle)
+                        {
+                            ButtonMiddleClick(_buttons[x, y], x, y);
                         }
                     };
                     _buttons[i, j].Click += delegate(Object target, EventArgs eventAgrs)
